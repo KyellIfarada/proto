@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package banks;
+
+// Request from customer or branch to branch
+message BranchRequest {
+  int32 id = 1;                // caller id (pertaining to customer, branch)
+  string Interface_type = 2;   // (pertaining to query,deposit,withdraw,propagate_deposit or propagate_withdraw )
+  int32 money = 3;             // amount for deposit, withdraw
+}
+
+// Response message from a branch
+message BranchResponse {
+  int32 id = 1;                // responder branch id
+  string Interface_type = 2;   // type of operation completed 
+  string result = 3;           // "success" or "fail" (pertaining to deposit/withdraw)
+  int32 balance = 4;           // current branch balance (pertaining to query)
+}
+
+// Bank service for branch-to-branch and customer-to-branch communication
+service BranchService {
+  rpc MsgDelivery (BranchRequest) returns (BranchResponse);
+}
