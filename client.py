@@ -58,7 +58,7 @@ def main():
                 
                 # Only include "balance" for query, "result" for deposit/withdraw
                 if event_instance["interface"] == "query":
-                    output_events.append({"interface": "query", "balance": balance_result})
+                    output_events.append({"interface": "query", "balance": balance_result['balance']})
                 else:
                     output_events.append({"interface": event_instance["interface"], "result": "success"})
             except Exception as z:
