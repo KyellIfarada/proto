@@ -22,7 +22,7 @@ class Branch(banks_pb2_grpc.BranchServiceServicer):
 
 # Solo Method for every request
     def MsgDelivery(self, request, context):
-        interface_instance = request.interface
+        interface_instance = request.Interface_type
         if interface_instance == "query":
             return self.query_account()
         elif interface_instance == "deposit":
@@ -35,14 +35,14 @@ class Branch(banks_pb2_grpc.BranchServiceServicer):
             return self.propagate_withdraw(request.money)
         else:
             return banks_pb2.BranchResponse(
-                id=self.id, interface=interface_instance, result="fail", balance=self.balance
+                id=self.id, Interface_type=interface_instance, result="fail", balance=self.balance
             )
 
     #Create functions for each interface that is delivered from the Branch to be returned to the client of the requesting customer ----
     def query_account(self):
         print(f"[Branch {self.id}] Query balance={self.balance}")
         return banks_pb2.BranchResponse(
-            id=self.id, interface="query", result="success", balance=self.balance
+            id=self.id, Interface_type="query", result="success", balance=self.balance
         )
 
     def deposit_money(self, money_amount):
@@ -50,7 +50,7 @@ class Branch(banks_pb2_grpc.BranchServiceServicer):
         print(f"[Branch {self.id}] Deposit +{money_amount}, new balance={self.balance}")
         self._propagate_interface_update(money_amount, "propagate_deposit")
         return banks_pb2.BranchResponse(
-            id=self.id, interface="deposit", result="success", balance=self.balance
+            id=self.id, Interface_type="deposit", result="success", balance=self.balance
         )
 
     #withdraw money from the branch balance and propagate the update to other branches.
@@ -60,26 +60,26 @@ class Branch(banks_pb2_grpc.BranchServiceServicer):
             print(f"[Branch {self.id}] Withdraw -{money_amount}, new balance={self.balance}")
             self._propagate_interface_update(money_amount, "propagate_withdraw")
             return banks_pb2.BranchResponse(
-                id=self.id, interface="withdraw", result="success", balance=self.balance
+                id=self.id, Interface_type="withdraw", result="success", balance=self.balance
             )
         else:
             print(f"[Branch {self.id}] Withdraw failed (insufficient funds).")
             return banks_pb2.BranchResponse(
-                id=self.id, interface="withdraw", result="fail", balance=self.balance
+                id=self.id, Interface_type="withdraw", result="fail", balance=self.balance
             )
 
     def propagate_deposit(self, money_amount):
         self.balance += money_amount
         print(f"[Branch {self.id}] Propagated deposit +{money_amount}, balance={self.balance}")
         return banks_pb2.BranchResponse(
-            id=self.id, interface="propagate_deposit", result="success", balance=self.balance
+            id=self.id, Interface_type="propagate_deposit", result="success", balance=self.balance
         )
 
     def propagate_withdraw(self, money_amount):
         self.balance -= money_amount
         print(f"[Branch {self.id}] Propagated withdraw -{money_amount}, balance={self.balance}")
         return banks_pb2.BranchResponse(
-            id=self.id, interface="propagate_withdraw", result="success", balance=self.balance
+            id=self.id, Interface_type="propagate_withdraw", result="success", balance=self.balance
         )
 
     #Update the balance of the Branch balance with the Branches request 
@@ -89,7 +89,7 @@ class Branch(banks_pb2_grpc.BranchServiceServicer):
                 rpc_message = getattr(stub, "MsgDelivery")  # always call MsgDelivery
                 rpc_message(banks_pb2.BranchRequest(
                     id=self.id,
-                    interface=method_name,
+                    Interface_type=method_name,
                     money=money_amount
                 ))
             except Exception as e:
