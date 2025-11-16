@@ -2,7 +2,7 @@ import grpc
 import banks_pb2, banks_pb2_grpc
 
 class Branch(banks_pb2_grpc.BranchServiceServicer):  
-# Initialize the branch with ID, balance, and list of branches, including stubs to other branches, and list of recieve message.
+    # Initialize the branch with ID, balance, and list of branches, including stubs to other branches, and list of recieve message.
     def __init__(self, id, balance, branches):
         self.id = id
         self.balance = balance
@@ -10,7 +10,7 @@ class Branch(banks_pb2_grpc.BranchServiceServicer):
         self.stubList = list()  
         self.recvMsg = list()
 
-# Create ports for Branchs and Branch stubs that connect to client stubs and other branch stubs.
+        # Create ports for Branchs and Branch stubs that connect to client stubs and other branch stubs.
         for branch_instance in branches:
             if branch_instance["id"] != self.id:
                 port_number = branch_instance.get("port", 50050 + branch_instance["id"])
@@ -20,7 +20,7 @@ class Branch(banks_pb2_grpc.BranchServiceServicer):
 
         print(f"[ The Branch {self.id}] starts with balance_amount={self.balance}")
 
-# Solo Method for every request
+    # Solo Method for every request
     def MsgDelivery(self, request, context):
         interface_instance = request.Interface_type
         if interface_instance == "query":

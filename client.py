@@ -21,7 +21,6 @@ def main():
     branches_database = [Interface_type for Interface_type in database if Interface_type["type"] == "branch"]
     branch_ids_database = [branch["id"] for branch in branches_database]
 
-
     # Create a list to hold all customer objects 
     customersObjList = []
 
