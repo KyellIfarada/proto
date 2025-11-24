@@ -2,19 +2,32 @@ syntax = "proto3";
 
 package banks;
 
+// Events used for logging
+message Events {
+  int32 id = 1;                         // id of branch that observed the event
+  int32 customer_request_id = 2;       // customer-request-id that started the event
+  int32 logicalClock = 3;
+  string interface_type = 4;
+  string comment = 5; 
+}
+
 // Request from customer or branch to branch
 message BranchRequest {
-  int32 id = 1;                // caller id (pertaining to customer, branch)
-  string Interface_type = 2;   // (pertaining to query,deposit,withdraw,propagate_deposit or propagate_withdraw )
-  int32 money = 3;             // amount for deposit, withdraw
+  int32 id = 1;                        // caller id (pertaining to customer, branch)
+  string Interface_type = 2;           // ( pertaining to query,deposit,withdraw,propagate_deposit or propagate_withdraw )
+  int32 money = 3;                     // amount for deposit, withdraw
+  int32 customer_request_id = 4;        // customer-request-id 
+  int32 logicalClock = 5 ;             // value of Customer/Branch LogicalClock
 }
 
 // Response message from a branch
 message BranchResponse {
-  int32 id = 1;                // responder branch id
-  string Interface_type = 2;   // type of operation completed 
-  string result = 3;           // "success" or "fail" (pertaining to deposit/withdraw)
-  int32 balance = 4;           // current branch balance (pertaining to query)
+  int32 id = 1;                        // responder branch id
+  string Interface_type = 2;           // type of operation completed 
+  string result = 3;                   // "success" or "fail" (pertaining to deposit/withdraw)
+  int32 balance = 4;                   // current branch balance (pertaining to query)
+  int32 logicalClock = 5 ;             // value of Branch LogicalClock
+  repeated Events events_log = 6;      // logging of events within branch instance 
 }
 
 // Bank service for branch-to-branch and customer-to-branch communication

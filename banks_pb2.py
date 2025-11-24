@@ -24,17 +24,19 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0b\x62\x61nks.proto\x12\x05\x62\x61nks\"B\n\rBranchRequest\x12\n\n\x02id\x18\x01 \x01(\x05\x12\x16\n\x0eInterface_type\x18\x02 \x01(\t\x12\r\n\x05money\x18\x03 \x01(\x05\"U\n\x0e\x42ranchResponse\x12\n\n\x02id\x18\x01 \x01(\x05\x12\x16\n\x0eInterface_type\x18\x02 \x01(\t\x12\x0e\n\x06result\x18\x03 \x01(\t\x12\x0f\n\x07\x62\x61lance\x18\x04 \x01(\x05\x32K\n\rBranchService\x12:\n\x0bMsgDelivery\x12\x14.banks.BranchRequest\x1a\x15.banks.BranchResponseb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0b\x62\x61nks.proto\x12\x05\x62\x61nks\"p\n\x06\x45vents\x12\n\n\x02id\x18\x01 \x01(\x05\x12\x1b\n\x13\x63ustomer_request_id\x18\x02 \x01(\x05\x12\x14\n\x0clogicalClock\x18\x03 \x01(\x05\x12\x16\n\x0einterface_type\x18\x04 \x01(\t\x12\x0f\n\x07\x63omment\x18\x05 \x01(\t\"u\n\rBranchRequest\x12\n\n\x02id\x18\x01 \x01(\x05\x12\x16\n\x0eInterface_type\x18\x02 \x01(\t\x12\r\n\x05money\x18\x03 \x01(\x05\x12\x1b\n\x13\x63ustomer_request_id\x18\x04 \x01(\x05\x12\x14\n\x0clogicalClock\x18\x05 \x01(\x05\"\x8e\x01\n\x0e\x42ranchResponse\x12\n\n\x02id\x18\x01 \x01(\x05\x12\x16\n\x0eInterface_type\x18\x02 \x01(\t\x12\x0e\n\x06result\x18\x03 \x01(\t\x12\x0f\n\x07\x62\x61lance\x18\x04 \x01(\x05\x12\x14\n\x0clogicalClock\x18\x05 \x01(\x05\x12!\n\nevents_log\x18\x06 \x03(\x0b\x32\r.banks.Events2K\n\rBranchService\x12:\n\x0bMsgDelivery\x12\x14.banks.BranchRequest\x1a\x15.banks.BranchResponseb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'banks_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
-  _globals['_BRANCHREQUEST']._serialized_start=22
-  _globals['_BRANCHREQUEST']._serialized_end=88
-  _globals['_BRANCHRESPONSE']._serialized_start=90
-  _globals['_BRANCHRESPONSE']._serialized_end=175
-  _globals['_BRANCHSERVICE']._serialized_start=177
-  _globals['_BRANCHSERVICE']._serialized_end=252
+  _globals['_EVENTS']._serialized_start=22
+  _globals['_EVENTS']._serialized_end=134
+  _globals['_BRANCHREQUEST']._serialized_start=136
+  _globals['_BRANCHREQUEST']._serialized_end=253
+  _globals['_BRANCHRESPONSE']._serialized_start=256
+  _globals['_BRANCHRESPONSE']._serialized_end=398
+  _globals['_BRANCHSERVICE']._serialized_start=400
+  _globals['_BRANCHSERVICE']._serialized_end=475
 # @@protoc_insertion_point(module_scope)

@@ -1,6 +1,8 @@
 import json
 import sys
 import time
+import grpc 
+import banks_pb2_grpc, banks_pb2
 from customer import Customer
 
 def main():
@@ -27,8 +29,19 @@ def main():
     # Create Customer objects and their attributes 
     for customerInfo in customers_database:
         c_id = customerInfo["id"]
-        events = customerInfo.get("events", [])
-        customer_instance = Customer(c_id, events)
+
+        events_nformatted = customerInfo["customer-requests"]
+
+        events_formatted = []
+        for event in events_nformatted:
+            events_formatted.append({
+                "id": event["customer-request-id"],
+                "interface": event["interface"],
+                "money": event.get("money", 0)
+            })
+
+        customer_instance = Customer(c_id, events_formatted)
+        customer_instance.logical_clock = customerInfo["id"]
 
         # Map customer ID to branch ID if customer id exists in branch IDs with port number otherwise create a default port for the branch with its own ID.
         if c_id in branch_ids_database:
@@ -36,39 +49,111 @@ def main():
         else:
             branch_address = f"localhost:{50050 + branch_ids_database[0]}"
 
+        
         # Create gRPC stub of the Branch for the customer to connect to the branch
         try:
             customer_instance.createStub(branch_address)
-        except Exception as z:
-            print(f"[Client] Failure to produce stub pertaining to Customer {c_id} at branch address {branch_address}: {z}")
+        except Exception as a:
+            print(f"[Client] Failure to produce stub pertaining to Customer {c_id} at branch address {branch_address}: {a}")
 
         # Add Customer objects to list of customers.
         customersObjList.append(customer_instance)
-
 
     print("[Client] Intiating performance of customer events...")
 
     # Perform events in order of each customer
     for customer_instance in customersObjList:
-        output_events = []
         for event_instance in customer_instance.events:
             try:
                 balance_result = customer_instance.executeSingleEvent(event_instance)
+                time.sleep(1.0)  # delay for branch propagation
+            except Exception as b:
+                print(f"[Client] Error executing event {event_instance} for Customer {customer_instance.id}: {b}")
+
+    # following customer events, request logs from all branches
+    branches_result = []
+    complete_request_events = []
+    
+    for branch in branches_database:
+        branch_id = branch["id"]
+        branch_port = branch.get("port", 50050 + branch_id)
+        # Build a temporary customer stub to fetch logs - or use gRPC channel
+
+        try:
+
+            channel = grpc.insecure_channel(f'localhost:{branch_port}')
+            stub = banks_pb2_grpc.BranchServiceStub(channel)
+
+            # Request get_log 
+            log_request = banks_pb2.BranchRequest(
+                id=0, 
+                Interface_type="get_log",  # top-level field in BranchRequest
+                money=0, 
+                customer_request_id=0, 
+                logicalClock=0
+            )  
+            
+            log_response = stub.MsgDelivery(log_request)
+
+            branch_events = []
+            for a in log_response.events_log:  # <-- corrected field name
                 
-                # Only include "balance" for query, "result" for deposit/withdraw
-                if event_instance["interface"] == "query":
-                    output_events.append({"interface": "query", "balance": balance_result['balance']})
-                else:
-                    output_events.append({"interface": event_instance["interface"], "result": "success"})
-            except Exception as z:
-                print(f"[Client] Error executing event {event_instance} for Customer {customer_instance.id}: {z}")
+                branch_events.append({
+                    "id": a.id,
+                    "customer-request-id": a.customer_request_id,
+                    "logical-clock": a.logicalClock,
+                    "interface": a.interface_type,   # <-- corrected field name
+                    "comment": a.comment
+                })
 
-            time.sleep(1)  # small delay for branch propagation
+                # add to the global request-events list, attach branch id
+                complete_request_events.append({
+                    "id": a.id, 
+                    "customer-request-id": a.customer_request_id,
+                    "type": "branch",
+                    "logical-clock": a.logicalClock,
+                    "interface": a.interface_type,   # <-- corrected field name
+                    "comment" : a.comment
+                })
 
-        customer_instance.recvMsg = output_events
+            branches_result.append({
+                "id": branch_id,
+                "type": "branch",
+                "events": sorted(branch_events, key=lambda b: b["logical-clock"])
+            })
+
+        except Exception as a:
+            print(f"[Client] Error fetching logs for Branch {branch_id}: {a}")
+
+
+    customer_output_list = []
+
+    for customer_instance in customersObjList:
+        customer_output_list.append({
+            "id": customer_instance.id,
+            "type": "customer",
+            "events": customer_instance.recvMsg
+        })
+
+    # add to global request list
+    for a in customer_instance.recvMsg:
+        complete_request_events.append({
+            "id": customer_instance.id,
+            "customer-request-id": a["customer-request-id"],
+            "type": "customer",
+            "logical-clock": a["logical-clock"],
+            "interface": a["interface"],
+            "comment": a["comment"]
+        })
+
 
     # Save output JSON
-    output = [{"id": a.id, "recv": a.recvMsg} for a in customersObjList]
+    output = { 
+        "customers": customer_output_list,
+        "branches": branches_result,
+        "request-events": sorted(complete_request_events, key=lambda c: c["logical-clock"])
+    }
+
     output_file = "output.json"
     try:
         with open(output_file, "w") as f:

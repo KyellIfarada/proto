@@ -19,6 +19,7 @@ def server(input_file):
     # Start a gRPC server for each branch
     for branch_instance in branches:
         branch_id = branch_instance["id"]
+        branch_instance["logical_clock"] = 0  # start logical clock
         port = 50050 + branch_id  
         branch_instance["port"] = port     # store port 
 
@@ -31,7 +32,8 @@ def server(input_file):
             server_instance
         )
 
-        server_instance.add_insecure_port(f"[::]:{port}")
+        server_instance.add_insecure_port(f"localhost:{port}")
+
         server_instance.start()
         servers.append(server_instance)
 
