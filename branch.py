@@ -22,15 +22,15 @@ class Branch(banks_pb2_grpc.BranchServiceServicer):
 
         print(f"[Branch {self.id}] starts with balance_amount={self.balance}")
 
-    # Main handler for incoming requests
+    # handler for incoming requests
     def MsgDelivery(self, request, context):
-        # <-- FIX: Interface_type matches proto
+        
         interface_instance = request.Interface_type
 
-        # Update logical clock based on received request
+        # Update logical clock based on request
         self.logical_clock = max(self.logical_clock, request.logicalClock) + 1
 
-        # Helper to return a BranchResponse
+        # Function to return a BranchResponse
         def return_response(result="success", balance=None):
             response = banks_pb2.BranchResponse(
                 id=self.id,
@@ -40,7 +40,7 @@ class Branch(banks_pb2_grpc.BranchServiceServicer):
                 logicalClock=self.logical_clock
             )
             return response
-        
+        # functions for each interface type
         if interface_instance == "query": 
             self.observe_event(request.customer_request_id, "query", f"event_recv from customer {request.id}")
             return return_response(result="success", balance=self.balance)
@@ -77,7 +77,7 @@ class Branch(banks_pb2_grpc.BranchServiceServicer):
                 balance=self.balance,
                 logicalClock=self.logical_clock
             )
-            # convert self.log dicts into banks_pb2.Events messages
+            # convert self.log into banks_pb2.Events messages
             for item in self.log:
                 response.events_log.add(
                     id=item["id"],

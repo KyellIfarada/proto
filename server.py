@@ -19,9 +19,9 @@ def server(input_file):
     # Start a gRPC server for each branch
     for branch_instance in branches:
         branch_id = branch_instance["id"]
-        branch_instance["logical_clock"] = 0  # start logical clock
+        branch_instance["logical_clock"] = 0  # begin the logical logical clock
         port = 50050 + branch_id  
-        branch_instance["port"] = port     # store port 
+        branch_instance["port"] = port     
 
         # Create Servers with single-threaded logic  
         server_instance = grpc.server(futures.ThreadPoolExecutor(max_workers=1))

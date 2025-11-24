@@ -18,7 +18,7 @@ def main():
         print(f"[Client] Failure to read input file for processing: {b}")
         return
 
-    # Divide customers and branches entries into two seperate data sets ( lists ) and gather branch IDs
+    # Divide customers and branches entries into two seperate data sets and gather branch IDs
     customers_database = [Interface_type for Interface_type in database if Interface_type["type"] == "customer"]
     branches_database = [Interface_type for Interface_type in database if Interface_type["type"] == "branch"]
     branch_ids_database = [branch["id"] for branch in branches_database]
@@ -66,18 +66,18 @@ def main():
         for event_instance in customer_instance.events:
             try:
                 balance_result = customer_instance.executeSingleEvent(event_instance)
-                time.sleep(1.0)  # delay for branch propagation
+                time.sleep(1.0)  
             except Exception as b:
                 print(f"[Client] Error executing event {event_instance} for Customer {customer_instance.id}: {b}")
 
-    # following customer events, request logs from all branches
+    # suceeding customer events, request logs from all branches
     branches_result = []
     complete_request_events = []
     
     for branch in branches_database:
         branch_id = branch["id"]
         branch_port = branch.get("port", 50050 + branch_id)
-        # Build a temporary customer stub to fetch logs - or use gRPC channel
+        # Create a customer stub to fetch logs - or use gRPC channel
 
         try:
 
@@ -96,23 +96,23 @@ def main():
             log_response = stub.MsgDelivery(log_request)
 
             branch_events = []
-            for a in log_response.events_log:  # <-- corrected field name
+            for a in log_response.events_log:  
                 
                 branch_events.append({
                     "id": a.id,
                     "customer-request-id": a.customer_request_id,
                     "logical-clock": a.logicalClock,
-                    "interface": a.interface_type,   # <-- corrected field name
+                    "interface": a.interface_type,   
                     "comment": a.comment
                 })
 
-                # add to the global request-events list, attach branch id
+                # add to the request-events list, attach branch id
                 complete_request_events.append({
                     "id": a.id, 
                     "customer-request-id": a.customer_request_id,
                     "type": "branch",
                     "logical-clock": a.logicalClock,
-                    "interface": a.interface_type,   # <-- corrected field name
+                    "interface": a.interface_type,   
                     "comment" : a.comment
                 })
 
@@ -135,7 +135,7 @@ def main():
             "events": customer_instance.recvMsg
         })
 
-    # add to global request list
+    # add to request list
     for a in customer_instance.recvMsg:
         complete_request_events.append({
             "id": customer_instance.id,

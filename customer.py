@@ -26,7 +26,7 @@ class Customer:
         money = event.get("money", 0)
         customer_request_id = event.get("id",event.get("customer_request_id", 0))
         
-        # <-- FIX: Interface_type matches proto
+        
         request = banks_pb2.BranchRequest(
             id=self.id,
             Interface_type = interface_type,
