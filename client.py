@@ -41,7 +41,7 @@ def main():
             })
 
         customer_instance = Customer(c_id, events_formatted)
-        customer_instance.logical_clock = customerInfo["id"]
+        customer_instance.logical_clock = 0  # Start from 0, not customer ID
 
         # Map customer ID to branch ID if customer id exists in branch IDs with port number otherwise create a default port for the branch with its own ID.
         if c_id in branch_ids_database:
@@ -77,7 +77,7 @@ def main():
     for branch in branches_database:
         branch_id = branch["id"]
         branch_port = branch.get("port", 50050 + branch_id)
-        # Create a customer stub to fetch logs - or use gRPC channel
+        # Create a customer stub to fetch logs 
 
         try:
 
@@ -99,27 +99,16 @@ def main():
             for a in log_response.events_log:  
                 
                 branch_events.append({
-                    "id": a.id,
                     "customer-request-id": a.customer_request_id,
-                    "logical-clock": a.logicalClock,
+                    "logical_clock": a.logicalClock,  
                     "interface": a.interface_type,   
                     "comment": a.comment
-                })
-
-                # add to the request-events list, attach branch id
-                complete_request_events.append({
-                    "id": a.id, 
-                    "customer-request-id": a.customer_request_id,
-                    "type": "branch",
-                    "logical-clock": a.logicalClock,
-                    "interface": a.interface_type,   
-                    "comment" : a.comment
                 })
 
             branches_result.append({
                 "id": branch_id,
                 "type": "branch",
-                "events": sorted(branch_events, key=lambda b: b["logical-clock"])
+                "events": sorted(branch_events, key=lambda b: b["logical_clock"])
             })
 
         except Exception as a:
@@ -129,30 +118,56 @@ def main():
     customer_output_list = []
 
     for customer_instance in customersObjList:
+        # Sort customer events by logical clock
+        sorted_events = sorted(customer_instance.recvMsg, key=lambda x: x["logical_clock"])
         customer_output_list.append({
             "id": customer_instance.id,
             "type": "customer",
-            "events": customer_instance.recvMsg
+            "events": sorted_events
         })
 
-    # add to request list
-    for a in customer_instance.recvMsg:
-        complete_request_events.append({
-            "id": customer_instance.id,
-            "customer-request-id": a["customer-request-id"],
-            "type": "customer",
-            "logical-clock": a["logical-clock"],
-            "interface": a["interface"],
-            "comment": a["comment"]
-        })
+    # Build request-events by grouping by customer-request-id
+    request_events_dict = {}
+    
+    # Add customer events to request-events
+    for customer_instance in customersObjList:
+        for event in customer_instance.recvMsg:
+            req_id = event["customer-request-id"]
+            if req_id not in request_events_dict:
+                request_events_dict[req_id] = []
+            request_events_dict[req_id].append({
+                "id": customer_instance.id,
+                "customer-request-id": req_id,
+                "type": "customer",
+                "logical_clock": event["logical_clock"],  
+                "interface": event["interface"],
+                "comment": event["comment"]
+            })
+    
+    # Add branch events to request-events
+    for branch in branches_result:
+        for event in branch["events"]:
+            req_id = event["customer-request-id"]
+            if req_id not in request_events_dict:
+                request_events_dict[req_id] = []
+            request_events_dict[req_id].append({
+                "id": branch["id"],
+                "customer-request-id": req_id,
+                "type": "branch",
+                "logical_clock": event["logical_clock"],  
+                "interface": event["interface"],
+                "comment": event["comment"]
+            })
+    
+    # Convert to required format for request-events
+    request_events_output = []
+    for req_id, events in request_events_dict.items():
+        # Sort events t by logical clock
+        sorted_events = sorted(events, key=lambda x: x["logical_clock"])
+        request_events_output.extend(sorted_events)
 
-
-    # Save output JSON
-    output = { 
-        "customers": customer_output_list,
-        "branches": branches_result,
-        "request-events": sorted(complete_request_events, key=lambda c: c["logical-clock"])
-    }
+    # Save output JSON 
+    output = customer_output_list + branches_result + request_events_output
 
     output_file = "output.json"
     try:

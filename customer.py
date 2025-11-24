@@ -26,27 +26,39 @@ class Customer:
         money = event.get("money", 0)
         customer_request_id = event.get("id",event.get("customer_request_id", 0))
         
+        # Increment clock for sending event
+        self.logical_clock += 1
         
         request = banks_pb2.BranchRequest(
             id=self.id,
             Interface_type = interface_type,
             money=money,
             customer_request_id = customer_request_id,
-            logicalClock=self.logical_clock + 1  
+            logicalClock=self.logical_clock
         )
+
+        # Record the send event
+        send_event_log = {
+            "customer-request-id": customer_request_id,
+            "logical_clock": self.logical_clock,  # underscore
+            "interface": interface_type,
+            "comment": f"event_sent from customer {self.id}"  # Fixed comment
+        }
+        self.recvMsg.append(send_event_log)
 
         # Send Message Request via gRPC based off of interface type to retrieve response
         try:
             response = self.stub.MsgDelivery(request)
 
-            self.logical_clock = max(self.logical_clock, response.logicalClock) + 1  
+            # Update logical clock on receive
+            self.logical_clock = max(self.logical_clock, response.logicalClock) + 1
 
             # Customer event log entry to match output format
             event_log = {
                 "customer-request-id": customer_request_id,
-                "logical-clock": response.logicalClock,
+                "logical_clock": self.logical_clock,  
                 "interface": interface_type,
-                "comment": f"event_recv from customer {response.id}"
+                "comment": f"event_recv from customer {self.id}"  
             }
             self.recvMsg.append(event_log)
 

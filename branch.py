@@ -27,7 +27,7 @@ class Branch(banks_pb2_grpc.BranchServiceServicer):
         
         interface_instance = request.Interface_type
 
-        # Update logical clock based on request
+        # Update logical clock based on request 
         self.logical_clock = max(self.logical_clock, request.logicalClock) + 1
 
         # Function to return a BranchResponse
@@ -40,6 +40,7 @@ class Branch(banks_pb2_grpc.BranchServiceServicer):
                 logicalClock=self.logical_clock
             )
             return response
+            
         # functions for each interface type
         if interface_instance == "query": 
             self.observe_event(request.customer_request_id, "query", f"event_recv from customer {request.id}")
@@ -107,14 +108,16 @@ class Branch(banks_pb2_grpc.BranchServiceServicer):
     # Propagate changes to other branches
     def _propagate_interface_update(self, customer_request_id, money_amount, method_name):
         for (remote_id, stub) in self.stubList:
+            # Increment clock before sending propagation
+            self.logical_clock += 1
             try:
                 stub.MsgDelivery(banks_pb2.BranchRequest(
                     id=self.id,
-                    Interface_type=method_name,  # <-- FIX
+                    Interface_type=method_name,
                     money=money_amount,
                     customer_request_id=customer_request_id,
-                    logicalClock=self.logical_clock + 1
+                    logicalClock=self.logical_clock
                 ))
-                self.observe_event(customer_request_id, method_name, f"event_sent from branch {self.id}")
+                self.observe_event(customer_request_id, method_name, f"event_sent to branch {remote_id}")  # Fixed comment
             except Exception as e:
                 print(f"[Branch {self.id}] Propagation error: {e}")
