@@ -167,7 +167,11 @@ def main():
         request_events_output.extend(sorted_events)
 
     # Save output JSON 
-    output = customer_output_list + branches_result + request_events_output
+    output = []
+
+    output.extend(customer_output_list)     # list of customer dictionaries
+    output.extend(branches_result)          # list of branch dictionaries
+    output.extend(request_events_output)    # list of request-event dictionaries
 
     output_file = "output.json"
     try:
