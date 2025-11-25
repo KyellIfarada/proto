@@ -162,9 +162,18 @@ def main():
     # Convert to required format for request-events
     request_events_output = []
     for req_id, events in request_events_dict.items():
-        # Sort events t by logical clock
+        # Sort events by logical clock
         sorted_events = sorted(events, key=lambda x: x["logical_clock"])
-        request_events_output.extend(sorted_events)
+
+        for event in sorted_events:
+            request_events_output.append({
+                "customer-request-id": req_id,
+                "id": event["id"],
+                "type": event["type"],
+                "logical_clock": event["logical_clock"],
+                "interface": event["interface"],
+                "comment": event["comment"]
+            })
 
     # Save output JSON 
     output = []
