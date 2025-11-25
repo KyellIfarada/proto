@@ -119,14 +119,14 @@ def main():
 
     for customer_instance in customersObjList:
         # Sort customer events by logical clockfor event_sent only
-            filtered_events = [
-            a for a in customer_instance.recvMsg 
-            if "sent" in a["comment"]
+        filtered_events = [
+        a for a in customer_instance.recvMsg 
+        if "sent" in a["comment"]
             ]
 
-            sorted_events = sorted(filtered_events, key=lambda x: x["logical_clock"])
+        sorted_events = sorted(filtered_events, key=lambda x: x["logical_clock"])
 
-            customer_output_list.append({
+        customer_output_list.append({
                 "id": customer_instance.id,
                 "type": "customer",
                 "events": sorted_events
