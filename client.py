@@ -118,31 +118,40 @@ def main():
     customer_output_list = []
 
     for customer_instance in customersObjList:
-        # Sort customer events by logical clock
-        sorted_events = sorted(customer_instance.recvMsg, key=lambda x: x["logical_clock"])
-        customer_output_list.append({
-            "id": customer_instance.id,
-            "type": "customer",
-            "events": sorted_events
-        })
+        # Sort customer events by logical clockfor event_sent only
+            filtered_events = [
+            a for a in customer_instance.recvMsg 
+            if "sent" in a["comment"]
+            ]
+
+            sorted_events = sorted(filtered_events, key=lambda x: x["logical_clock"])
+
+            customer_output_list.append({
+                "id": customer_instance.id,
+                "type": "customer",
+                "events": sorted_events
+            })
 
     # Build request-events by grouping by customer-request-id
     request_events_dict = {}
     
-    # Add customer events to request-events
+    # Add customer events to request-events excluding recv events
     for customer_instance in customersObjList:
         for event in customer_instance.recvMsg:
-            req_id = event["customer-request-id"]
-            if req_id not in request_events_dict:
-                request_events_dict[req_id] = []
-            request_events_dict[req_id].append({
-                "id": customer_instance.id,
-                "customer-request-id": req_id,
-                "type": "customer",
-                "logical_clock": event["logical_clock"],  
-                "interface": event["interface"],
-                "comment": event["comment"]
-            })
+                if "sent" not in event["comment"]:
+                    continue
+
+                req_id = event["customer-request-id"]
+                if req_id not in request_events_dict:
+                    request_events_dict[req_id] = []
+                request_events_dict[req_id].append({
+                    "id": customer_instance.id,
+                    "customer-request-id": req_id,
+                    "type": "customer",
+                    "logical_clock": event["logical_clock"],  
+                    "interface": event["interface"],
+                    "comment": event["comment"]
+                })
     
     # Add branch events to request-events
     for branch in branches_result:
