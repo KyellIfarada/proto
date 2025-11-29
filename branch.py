@@ -130,12 +130,12 @@ class Branch(banks_pb2_grpc.BranchServiceServicer):
             stub = banks_pb2_grpc.BranchServiceStub(channel)
 
             try:
-                response = banks_pb2.BranchRequest(
+                request = banks_pb2.BranchRequest(
                     id=self.id,
                     interface_type=method_name,
                     money=money_amount,
                     write_id=write_id
                 )
-                stub.MsgDelivery(response)
+                stub.MsgDelivery(request)
             except Exception as e:
                 print(f"[Branch {self.id}] Propagation error: {e}")
