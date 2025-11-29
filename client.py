@@ -54,11 +54,7 @@ def main():
                 if event_instance["interface"] == "query":
                     output.append({
                         "id": customer_instance.id,
-                        "recv": [{
-                            "interface": "query",
-                            "branch": response["id"],
-                            "balance": response["balance"]
-                        }]
+                        "balance": response["balance"] 
                     })
                
 

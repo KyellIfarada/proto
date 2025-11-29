@@ -1,1 +1,38 @@
-[]
+[
+  {
+    "id": 1,
+    "balance": 60
+  },
+  {
+    "id": 1,
+    "balance": 60
+  },
+  {
+    "id": 1,
+    "balance": 60
+  },
+  {
+    "id": 1,
+    "balance": 30
+  },
+  {
+    "id": 1,
+    "balance": 30
+  },
+  {
+    "id": 1,
+    "balance": 30
+  },
+  {
+    "id": 1,
+    "balance": 90
+  },
+  {
+    "id": 1,
+    "balance": 90
+  },
+  {
+    "id": 1,
+    "balance": 90
+  }
+]
