@@ -1,55 +1,106 @@
+import json
+import sys
 import grpc
 import banks_pb2
 import banks_pb2_grpc
 import time
 
 class Customer:
-    def __init__(self, id, events):
+    def __init__(self, id, events, branches):
         self.id = id
         self.events = events
-        self.recvMsg = list()
-        self.stub = None
-    #Create a Stub to connect to branch via a port.
-    def createStub(self, address='localhost:50051'):
-        channel = grpc.insecure_channel(address)
-        self.stub = banks_pb2_grpc.BranchServiceStub(channel)
-        print(f"[Customer {self.id}] Connected to Bank at {address}")
-    #Create a Single event definition for retrieving information from branch.
+        self.branches = branches
+        self.recvMsg = []
+        self.stubList = []
+        self.set_of_writes = set()
+
+        
+        for branch_instance in self.branches:
+            branch_id = branch_instance["id"]
+            port = 50050 + branch_id
+            branch_instance["port"] = port
+
+    # Create a Stub to connect to all branches via ports.
+    def createStub(self):
+        for branch in self.branches:
+            address = f"localhost:{branch['port']}"
+            channel = grpc.insecure_channel(address)
+            stub = banks_pb2_grpc.BranchServiceStub(channel)
+            self.stubList.append(stub)
+            print(f"[Customer {self.id}] Connected to Bank at {address}")
+
+    # find stub idx by branch id
+    def desired_stub_by_branch_id(self, branch_id):
+        for a, c in enumerate(self.branches):
+            if c.get("id") == branch_id:
+                return self.stubList[a], c
+        return None, None
+
+    # Create a Single event definition for retrieving information from branches.
     def executeSingleEvent(self, event):
-        if not self.stub:
+        if not self.stubList:
             raise RuntimeError("Stub does not exist.")
 
-        Interface_type = event.get("interface").lower()
+        interface_type = event.get("interface").lower()
         money = event.get("money", 0)
+
+        desired_branch_id = event.get("branch", None)
+      
+        stub, target_branch = self.desired_stub_by_branch_id(desired_branch_id)
+        if stub is None:
+            raise RuntimeError(
+                f"Target branch {desired_branch_id} not found for Customer {self.id}"
+            )
+
+        # send message of customer id, interface type, money amount
         request = banks_pb2.BranchRequest(
             id=self.id,
-            Interface_type=Interface_type,
+            interface_type=interface_type,
             money=money
         )
 
-        # Send Message Request via gRPC based off of interface type to retrieve response
+        # Include client's set_of_writes and list the set of writes of the customer
+        request.set_of_writes.extend(list(self.set_of_writes))
+
         try:
-            response = self.stub.MsgDelivery(request)
-            # Build message based on interface type
-            if Interface_type == "query":
-                msg = {"interface": "query", "balance": getattr(response, "balance", 0)}
-            else:  # deposit or withdraw
-                msg = {"interface": Interface_type, "result": getattr(response, "result", "N/A")}
-            self.recvMsg.append(msg)
-            print(f"[Customer {self.id}] {Interface_type.upper()} → {msg}") 
-            return msg
-        except grpc.RpcError as e:
-            print(f"[Customer {self.id}] gRPC error whilst {Interface_type}: {e}")
-            return {"interface": Interface_type, "result": "error"}
+            response = stub.MsgDelivery(request)
+
+            # Save write_id if present from branch response if write occured on branch
+            if response.write_id:
+                self.set_of_writes.add(int(response.write_id))
+
+            # Build output
+            if interface_type == "query":
+                output = {
+                    "interface": "query",
+                    "balance": response.balance,
+                    "id": response.id
+                }
+            else:
+                output = {
+                    "interface": interface_type,
+                    "result": response.result,
+                    "id": response.id
+                }
+
+            self.recvMsg.append(output)
+            print(f"[Customer {self.id}] {interface_type.upper()} → {output}")
+
+            return output
+
+        except grpc.RpcError as g:
+            print(f"[[Customer] {self.id}] gRPC error during {interface_type}: {g}")
+            return {"interface": interface_type, "result": "error"}
 
     def executeEvents(self):
-        if not self.stub:
-            raise RuntimeError("Stub does not exist.")
+        if not self.stubList:
+            raise RuntimeError("StubList not found.")
 
         for event in self.events:
             self.executeSingleEvent(event)
-            time.sleep(1.0)
-        print(f"[Customer {self.id}] All Events Done.\n")
+            time.sleep(.2)
+
+        print(f"[Customer {self.id}] All Events Completed.\n")
 
     def getOutputFormat(self):
         """Return output."""
