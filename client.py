@@ -43,43 +43,45 @@ def main():
 
     print("[Client] Intiating performance of customer events...")
 
-    # Process events and add results to each customer's recvMsg
-    for customer_instance in customersObjList:
-        output_events = []
+   # Process events and add results to each customer's recvMsg
+    output = []  # This will store the final output in the desired format
 
+    for customer_instance in customersObjList:
         for event_instance in customer_instance.events:
             try:
                 response = customer_instance.executeSingleEvent(event_instance)
 
                 if event_instance["interface"] == "query":
-                    output_events.append({
-                        "interface": "query",
-                        "branch": response["id"],
-                        "balance": response["balance"]
+                    output.append({
+                        "id": customer_instance.id,
+                        "recv": [{
+                            "interface": "query",
+                            "branch": response["id"],
+                            "balance": response["balance"]
+                        }]
                     })
                 else:
-                    output_events.append({
-                        "interface": event_instance["interface"],
-                        "branch": response["id"],
-                        "result": response["result"]
+                    output.append({
+                        "id": customer_instance.id,
+                        "recv": [{
+                            "interface": event_instance["interface"],
+                            "branch": response["id"],
+                            "result": response["result"]
+                        }]
                     })
 
             except Exception as z:
                 print(f"[Client] Error performing event {event_instance} by Customer {customer_instance.id}: {z}")
 
-            time.sleep(1)  # leave propagation time for withdraw and deposit events
-
-        customer_instance.recvMsg = output_events
+            time.sleep(.1)  # leave propagation time for withdraw and deposit events
 
     # Save output JSON
-    output = [{"id": c.id, "recv": c.recvMsg} for c in customersObjList]
-
     try:
         with open("output.json", "w") as f:
             json.dump(output, f, indent=2)
         print("[Client] Output correctly put to output.json")
     except Exception as b:
-        print(f"[Client] Unsuccesful write to outgoing file: {b}")
+        print(f"[Client] Unsuccessful write to outgoing file: {b}")
 
-if __name__ == "__main__":
-    main()
+    if __name__ == "__main__":
+        main()
