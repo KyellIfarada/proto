@@ -60,15 +60,7 @@ def main():
                             "balance": response["balance"]
                         }]
                     })
-                else:
-                    output.append({
-                        "id": customer_instance.id,
-                        "recv": [{
-                            "interface": event_instance["interface"],
-                            "branch": response["id"],
-                            "result": response["result"]
-                        }]
-                    })
+               
 
             except Exception as z:
                 print(f"[Client] Error performing event {event_instance} by Customer {customer_instance.id}: {z}")

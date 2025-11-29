@@ -31,7 +31,7 @@ def server(input_file):
             server_instance
         )
 
-        server_instance.add_insecure_port(f"[::]:{port}")
+        server_instance.add_insecure_port(f"localhost:{port}")
         server_instance.start()
         servers.append(server_instance)
 
