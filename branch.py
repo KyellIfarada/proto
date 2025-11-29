@@ -36,9 +36,13 @@ class Branch(banks_pb2_grpc.BranchServiceServicer):
             return self.query_account()
 
         elif interface_instance == "deposit":
+            while not client_side_set_of_writes.issubset(self.set_of_writes):
+                time.sleep(0.02)
             return self.deposit_money(request.money)
 
         elif interface_instance == "withdraw":
+            while not client_side_set_of_writes.issubset(self.set_of_writes):
+                time.sleep(0.02)
             return self.withdraw_money(request.money)
         
         #establish write id for propagation methods
