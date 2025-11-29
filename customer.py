@@ -30,7 +30,7 @@ class Customer:
             print(f"[Customer {self.id}] Connected to Bank at {address}")
 
     # find stub idx by branch id
-    def locate_stub_by_branch_id(self, branch_id):
+    def desired_stub_by_branch_id(self, branch_id):
         for a, c in enumerate(self.branches):
             if c.get("id") == branch_id:
                 return self.stubList[a], c
@@ -44,12 +44,12 @@ class Customer:
         interface_type = event.get("interface").lower()
         money = event.get("money", 0)
 
-        target_branch_id = event.get("branch", None)
+        desired_branch_id = event.get("branch", None)
       
-        stub, target_branch = self.locate_stub_by_branch_id(target_branch_id)
+        stub, target_branch = self.desired_stub_by_branch_id(desired_branch_id)
         if stub is None:
             raise RuntimeError(
-                f"Target branch {target_branch_id} not found for Customer {self.id}"
+                f"Target branch {desired_branch_id} not found for Customer {self.id}"
             )
 
         # send message of customer id, interface type, money amount
