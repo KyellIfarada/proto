@@ -1,6 +1,7 @@
 import grpc
 import banks_pb2, banks_pb2_grpc
 import time
+import threading
 
 class Branch(banks_pb2_grpc.BranchServiceServicer):
 
@@ -10,6 +11,7 @@ class Branch(banks_pb2_grpc.BranchServiceServicer):
         self.branches = branches
         self.stubList = []
         self.recvMsg = []
+        self.lock = threading.Lock()
 
         self.set_of_writes = set()
         self.write_order = 0
@@ -24,7 +26,7 @@ class Branch(banks_pb2_grpc.BranchServiceServicer):
 
     def MsgDelivery(self, request, context):
 
-        client_side_set_of_writes = set(request.set_of_writes)
+        client_side_set_of_writes = set(int(b) for b in request.set_of_writes)
 
         interface_instance = request.interface_type
 
@@ -49,14 +51,16 @@ class Branch(banks_pb2_grpc.BranchServiceServicer):
 
         elif interface_instance == "propagate_deposit":
             if request.write_id:
-                self.set_of_writes.add(int(request.write_id))
+                with self.lock:
+                    self.set_of_writes.add(int(request.write_id))
             return self.propagate_deposit(request.money)
         
         #establish write id for propagation methods
 
         elif interface_instance == "propagate_withdraw":
             if request.write_id:
-                self.set_of_writes.add(int(request.write_id))
+                with self.lock:
+                 self.set_of_writes.add(int(request.write_id))
             return self.propagate_withdraw(request.money)
 
         return banks_pb2.BranchResponse(
@@ -64,12 +68,14 @@ class Branch(banks_pb2_grpc.BranchServiceServicer):
             result="fail", balance=self.balance
         )
 
+    # Query current account balance
     def query_account(self):
-        print(f"[Branch {self.id}] Query balance={self.balance}")
+        print(f"[[Branch] {self.id}] Query balance={self.balance}")
         return banks_pb2.BranchResponse(
             id=self.id, interface_type="query", result="success", balance=self.balance
         )
 
+    # Deposit money into account and asynchronously propagate to other branches
     def deposit_money(self, money_amount):
 
         self.write_order += 1
@@ -77,19 +83,23 @@ class Branch(banks_pb2_grpc.BranchServiceServicer):
         self.balance += money_amount
         self.set_of_writes.add(write_id)
 
-        print(f"[Branch {self.id}] Deposit +{money_amount}, new balance={self.balance}")
+        print(f"[[Branch] {self.id}] Deposit +{money_amount}, new balance={self.balance}")
+        
+        threading.Thread(
+        target=self._propagate_interface_update, args=(money_amount, "propagate_deposit", write_id)
+        ).start()
 
-        self._propagate_interface_update(money_amount, "propagate_deposit", write_id)
 
         return banks_pb2.BranchResponse(
             id=self.id, interface_type="deposit", result="success",
             balance=self.balance, write_id=write_id
         )
 
+    # Withdraw money from account and asynchronously propagate to other branches
     def withdraw_money(self, money_amount):
 
         if self.balance < money_amount:
-            print(f"[Branch {self.id}] Withdraw failed.")
+            print(f"[[Branch] {self.id}] Withdraw failed.")
             return banks_pb2.BranchResponse(
                 id=self.id, interface_type="withdraw", result="fail", balance=self.balance
             )
@@ -100,9 +110,11 @@ class Branch(banks_pb2_grpc.BranchServiceServicer):
         self.balance -= money_amount
         self.set_of_writes.add(write_id)
 
-        print(f"[Branch {self.id}] Withdraw -{money_amount}, new balance={self.balance}")
+        print(f"[[Branch] {self.id}] Withdraw -{money_amount}, new balance={self.balance}")
 
-        self._propagate_interface_update(money_amount, "propagate_withdraw", write_id)
+        threading.Thread(
+            target=self._propagate_interface_update, args=(money_amount, "propagate_withdraw", write_id)
+        ).start()
 
         return banks_pb2.BranchResponse(
             id=self.id, interface_type="withdraw", result="success",
@@ -110,21 +122,24 @@ class Branch(banks_pb2_grpc.BranchServiceServicer):
         )
 
     def propagate_deposit(self, money_amount):
-        self.balance += money_amount
-        print(f"[Branch {self.id}] Propagated deposit +{money_amount}")
-        return banks_pb2.BranchResponse(
-            id=self.id, interface_type="propagate_deposit", result="success", balance=self.balance
+        with self.lock:
+            self.balance += money_amount
+            print(f"[[Branch] {self.id}] Propagated deposit +{money_amount}")
+            return banks_pb2.BranchResponse(
+                id=self.id, interface_type="propagate_deposit", result="success", balance=self.balance
         )
 
     def propagate_withdraw(self, money_amount):
-        self.balance -= money_amount
-        print(f"[Branch {self.id}] Propagated withdraw -{money_amount}")
+        with self.lock:
+            self.balance -= money_amount
+            print(f"[[Branch] {self.id}] Propagated withdraw -{money_amount}")
         return banks_pb2.BranchResponse(
             id=self.id, interface_type="propagate_withdraw", result="success", balance=self.balance
         )
 
     def _propagate_interface_update(self, money_amount, method_name, write_id=None):
         for branch_instance in self.branches:
+
             # no self propagation
             if branch_instance["id"] == self.id:
                 continue  
@@ -138,8 +153,9 @@ class Branch(banks_pb2_grpc.BranchServiceServicer):
                     id=self.id,
                     interface_type=method_name,
                     money=money_amount,
-                    write_id=write_id
+                    write_id=write_id,
+                    
                 )
                 stub.MsgDelivery(request)
             except Exception as e:
-                print(f"[Branch {self.id}] Propagation error: {e}")
+                print(f"[[Branch] {self.id}] Propagation fail: {e}")
