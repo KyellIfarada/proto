@@ -6,35 +6,23 @@ import banks_pb2_grpc
 import time
 
 class Customer:
-    def __init__(self, id, events):
+    def __init__(self, id, events, branches):
         self.id = id
         self.events = events
+        self.branches = branches
         self.recvMsg = []
         self.stubList = []
         self.set_of_writes = set()
 
-        # Load File to read of branch info for each customer
-        load_file = sys.argv[1]
-
-        try:
-            with open(load_file, "r") as file:
-                database = json.load(file)
-        except Exception as x:
-            print(f"[Customer] Unable to read input file for use: {x}")
-            return
-
-        # Extract only branch entries and initialize port attributes for each customer
-        self.branches = [
-            item for item in database if item["type"] == "branch"
-        ]
+        
         for branch_instance in self.branches:
             branch_id = branch_instance["id"]
             port = 50050 + branch_id
             branch_instance["port"] = port
 
     # Create a Stub to connect to all branches via ports.
-    def createStub(self, branches):
-        for branch in branches:
+    def createStub(self):
+        for branch in self.branches:
             address = f"localhost:{branch['port']}"
             channel = grpc.insecure_channel(address)
             stub = banks_pb2_grpc.BranchServiceStub(channel)
@@ -53,7 +41,7 @@ class Customer:
         if not self.stubList:
             raise RuntimeError("Stub does not exist.")
 
-        Interface_type = event.get("interface").lower()
+        interface_type = event.get("interface").lower()
         money = event.get("money", 0)
 
         target_branch_id = event.get("branch", None)
@@ -67,7 +55,7 @@ class Customer:
         # send message of customer id, interface type, money amount
         request = banks_pb2.BranchRequest(
             id=self.id,
-            Interface_type=Interface_type,
+            interface_type=interface_type,
             money=money
         )
 
@@ -82,7 +70,7 @@ class Customer:
                 self.set_of_writes.add(int(response.write_id))
 
             # Build output
-            if Interface_type == "query":
+            if interface_type == "query":
                 output = {
                     "interface": "query",
                     "balance": response.balance,
@@ -90,19 +78,19 @@ class Customer:
                 }
             else:
                 output = {
-                    "interface": Interface_type,
+                    "interface": interface_type,
                     "result": response.result,
                     "id": response.id
                 }
 
             self.recvMsg.append(output)
-            print(f"[Customer {self.id}] {Interface_type.upper()} → {output}")
+            print(f"[Customer {self.id}] {interface_type.upper()} → {output}")
 
             return output
 
         except grpc.RpcError as g:
-            print(f"[[Customer] {self.id}] gRPC error during {Interface_type}: {g}")
-            return {"interface": Interface_type, "result": "error"}
+            print(f"[[Customer] {self.id}] gRPC error during {interface_type}: {g}")
+            return {"interface": interface_type, "result": "error"}
 
     def executeEvents(self):
         if not self.stubList:
@@ -110,7 +98,7 @@ class Customer:
 
         for event in self.events:
             self.executeSingleEvent(event)
-            time.sleep(1.0)
+            time.sleep(.2)
 
         print(f"[Customer {self.id}] All Events Completed.\n")
 

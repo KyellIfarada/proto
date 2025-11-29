@@ -27,7 +27,7 @@ def main():
     for customerInfo in customers_database:
         c_id = customerInfo["id"]
         events = customerInfo.get("events", [])
-        customer_instance = Customer(c_id, events)
+        customer_instance = Customer(c_id, events, branches_database)
 
         # Map branch IDs to ports
         branch_list = [{"id": branch["id"], "port": 50050 + branch["id"]} 
@@ -35,7 +35,7 @@ def main():
 
         # Create gRPC stubs 
         try:
-            customer_instance.createStub(branch_list)
+            customer_instance.createStub()
         except Exception as z:
             print(f"[Client] Failure to produce stub for Customer {c_id}: {z}")
 
@@ -73,7 +73,7 @@ def main():
             except Exception as z:
                 print(f"[Client] Error performing event {event_instance} by Customer {customer_instance.id}: {z}")
 
-            time.sleep(.1)  # leave propagation time for withdraw and deposit events
+            time.sleep(3)  # leave propagation time for withdraw and deposit events
 
     # Save output JSON
     try:
@@ -83,5 +83,5 @@ def main():
     except Exception as b:
         print(f"[Client] Unsuccessful write to outgoing file: {b}")
 
-    if __name__ == "__main__":
-        main()
+if __name__ == "__main__":
+    main()

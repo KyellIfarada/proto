@@ -26,7 +26,7 @@ class Branch(banks_pb2_grpc.BranchServiceServicer):
 
         client_side_set_of_writes = set(request.set_of_writes)
 
-        interface_instance = request.Interface_type
+        interface_instance = request.interface_type
 
         # Read Your Writes for queries
         if interface_instance == "query":
@@ -56,20 +56,20 @@ class Branch(banks_pb2_grpc.BranchServiceServicer):
             return self.propagate_withdraw(request.money)
 
         return banks_pb2.BranchResponse(
-            id=self.id, Interface_type=interface_instance,
+            id=self.id, interface_type=interface_instance,
             result="fail", balance=self.balance
         )
 
     def query_account(self):
         print(f"[Branch {self.id}] Query balance={self.balance}")
         return banks_pb2.BranchResponse(
-            id=self.id, Interface_type="query", result="success", balance=self.balance
+            id=self.id, interface_type="query", result="success", balance=self.balance
         )
 
     def deposit_money(self, money_amount):
 
         self.write_order += 1
-        write_id = self.id  + self.write_order * 100
+        write_id = self.id * 1000 + self.write_order 
         self.balance += money_amount
         self.set_of_writes.add(write_id)
 
@@ -78,7 +78,7 @@ class Branch(banks_pb2_grpc.BranchServiceServicer):
         self._propagate_interface_update(money_amount, "propagate_deposit", write_id)
 
         return banks_pb2.BranchResponse(
-            id=self.id, Interface_type="deposit", result="success",
+            id=self.id, interface_type="deposit", result="success",
             balance=self.balance, write_id=write_id
         )
 
@@ -87,11 +87,11 @@ class Branch(banks_pb2_grpc.BranchServiceServicer):
         if self.balance < money_amount:
             print(f"[Branch {self.id}] Withdraw failed.")
             return banks_pb2.BranchResponse(
-                id=self.id, Interface_type="withdraw", result="fail", balance=self.balance
+                id=self.id, interface_type="withdraw", result="fail", balance=self.balance
             )
 
         self.write_order += 1
-        write_id = self.id  + self.write_order * 100
+        write_id = self.id * 1000 + self.write_order 
 
         self.balance -= money_amount
         self.set_of_writes.add(write_id)
@@ -101,7 +101,7 @@ class Branch(banks_pb2_grpc.BranchServiceServicer):
         self._propagate_interface_update(money_amount, "propagate_withdraw", write_id)
 
         return banks_pb2.BranchResponse(
-            id=self.id, Interface_type="withdraw", result="success",
+            id=self.id, interface_type="withdraw", result="success",
             balance=self.balance, write_id=write_id
         )
 
@@ -109,14 +109,14 @@ class Branch(banks_pb2_grpc.BranchServiceServicer):
         self.balance += money_amount
         print(f"[Branch {self.id}] Propagated deposit +{money_amount}")
         return banks_pb2.BranchResponse(
-            id=self.id, Interface_type="propagate_deposit", result="success", balance=self.balance
+            id=self.id, interface_type="propagate_deposit", result="success", balance=self.balance
         )
 
     def propagate_withdraw(self, money_amount):
         self.balance -= money_amount
         print(f"[Branch {self.id}] Propagated withdraw -{money_amount}")
         return banks_pb2.BranchResponse(
-            id=self.id, Interface_type="propagate_withdraw", result="success", balance=self.balance
+            id=self.id, interface_type="propagate_withdraw", result="success", balance=self.balance
         )
 
     def _propagate_interface_update(self, money_amount, method_name, write_id=None):
@@ -132,7 +132,7 @@ class Branch(banks_pb2_grpc.BranchServiceServicer):
             try:
                 response = banks_pb2.BranchRequest(
                     id=self.id,
-                    Interface_type=method_name,
+                    interface_type=method_name,
                     money=money_amount,
                     write_id=write_id
                 )

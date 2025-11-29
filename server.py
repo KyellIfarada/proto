@@ -4,6 +4,7 @@ import json
 import time
 import banks_pb2_grpc
 from branch import Branch
+import sys
 
 def server(input_file):
     
@@ -23,7 +24,7 @@ def server(input_file):
         port = 50050 + branch_id
         branch_instance["port"] = port
 
-        server_instance = grpc.server(futures.ThreadPoolExecutor(max_workers=1))
+        server_instance = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
 
         banks_pb2_grpc.add_BranchServiceServicer_to_server(
             Branch(branch_id, branch_instance["balance"], branches),
@@ -47,7 +48,6 @@ def server(input_file):
         print("[Server] Turning off")
 
 if __name__ == "__main__":
-    import sys
     if len(sys.argv) != 2:
         print("python server.py input_file.json")
     else:
