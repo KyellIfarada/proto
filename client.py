@@ -53,7 +53,7 @@ def main():
 
                 if event_instance["interface"] == "query":
                     output.append({
-                        "id": customer_instance.id,
+                        "id": event_instance["id"],
                         "balance": response["balance"] 
                     })
                
