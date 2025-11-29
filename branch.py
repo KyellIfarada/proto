@@ -2,9 +2,9 @@ import grpc
 import banks_pb2, banks_pb2_grpc
 import time
 import threading
-
+import threads
 class Branch(banks_pb2_grpc.BranchServiceServicer):
-
+    # establish init variables
     def __init__(self, id, balance, branches):
         self.id = id
         self.balance = balance
@@ -55,6 +55,8 @@ class Branch(banks_pb2_grpc.BranchServiceServicer):
                     self.set_of_writes.add(int(request.write_id))
             return self.propagate_deposit(request.money)
         
+        
+        
         #establish write id for propagation methods
 
         elif interface_instance == "propagate_withdraw":
@@ -86,10 +88,10 @@ class Branch(banks_pb2_grpc.BranchServiceServicer):
         print(f"[[Branch] {self.id}] Deposit +{money_amount}, new balance={self.balance}")
         
         threading.Thread(
-        target=self._propagate_interface_update, args=(money_amount, "propagate_deposit", write_id)
-        ).start()
+            target=self._propagate_interface_update, args=(money_amount, "propagate_deposit", write_id)
+            )
 
-
+       
         return banks_pb2.BranchResponse(
             id=self.id, interface_type="deposit", result="success",
             balance=self.balance, write_id=write_id
@@ -120,23 +122,27 @@ class Branch(banks_pb2_grpc.BranchServiceServicer):
             id=self.id, interface_type="withdraw", result="success",
             balance=self.balance, write_id=write_id
         )
-
-    def propagate_deposit(self, money_amount):
+    # Propagate deposit to other branches with locking for asynchronous updates
+    def propagate_deposit(self, money_amount, write_id=None):
         with self.lock:
             self.balance += money_amount
+            if write_id:
+                self.set_of_writes.add(write_id)
             print(f"[[Branch] {self.id}] Propagated deposit +{money_amount}")
             return banks_pb2.BranchResponse(
                 id=self.id, interface_type="propagate_deposit", result="success", balance=self.balance
         )
-
-    def propagate_withdraw(self, money_amount):
+    # Propagate withdraw to other branches with locking for asynchronous updates
+    def propagate_withdraw(self, money_amount, write_id=None):
         with self.lock:
             self.balance -= money_amount
+            if write_id:
+                self.set_of_writes.add(write_id)
             print(f"[[Branch] {self.id}] Propagated withdraw -{money_amount}")
         return banks_pb2.BranchResponse(
             id=self.id, interface_type="propagate_withdraw", result="success", balance=self.balance
         )
-
+    # Asynchronously propagate interface updates to other branches
     def _propagate_interface_update(self, money_amount, method_name, write_id=None):
         for branch_instance in self.branches:
 
