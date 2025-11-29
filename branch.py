@@ -2,7 +2,7 @@ import grpc
 import banks_pb2, banks_pb2_grpc
 import time
 import threading
-import threads
+ 
 class Branch(banks_pb2_grpc.BranchServiceServicer):
     # establish init variables
     def __init__(self, id, balance, branches):
@@ -89,7 +89,7 @@ class Branch(banks_pb2_grpc.BranchServiceServicer):
         
         threading.Thread(
             target=self._propagate_interface_update, args=(money_amount, "propagate_deposit", write_id)
-            )
+            ).start()
 
        
         return banks_pb2.BranchResponse(
