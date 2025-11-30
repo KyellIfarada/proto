@@ -3,17 +3,18 @@ import banks_pb2, banks_pb2_grpc
 import time
 
 class Branch(banks_pb2_grpc.BranchServiceServicer):
-
+    #intialize branch with id, balance, and branches list
     def __init__(self, id, balance, branches):
         self.id = id
         self.balance = balance
         self.branches = branches
         self.stubList = []
         self.recvMsg = []
-
+        #Create set to hold write ids and writer order counter holder
         self.set_of_writes = set()
         self.write_order = 0
 
+        # Create gRPC for all existing branches
         for branch_instance in branches:
             port_number = branch_instance.get("port", 50050 + branch_instance["id"])
             channel = grpc.insecure_channel(f"localhost:{port_number}")
@@ -22,6 +23,7 @@ class Branch(banks_pb2_grpc.BranchServiceServicer):
 
         print(f"[[Branch] {self.id}] starts with balance_amount={self.balance}")
 
+    # Create MesgDelivery function to process requests
     def MsgDelivery(self, request, context):
 
         client_side_set_of_writes = set(request.set_of_writes)
@@ -60,12 +62,14 @@ class Branch(banks_pb2_grpc.BranchServiceServicer):
             result="fail", balance=self.balance
         )
 
+    # Query function handle return query information
     def query_account(self):
         print(f"[Branch {self.id}] Query balance={self.balance}")
         return banks_pb2.BranchResponse(
             id=self.id, interface_type="query", result="success", balance=self.balance
         )
-
+    
+    # Deposit function to handle deposit requests
     def deposit_money(self, money_amount):
 
         self.write_order += 1
@@ -82,6 +86,7 @@ class Branch(banks_pb2_grpc.BranchServiceServicer):
             balance=self.balance, write_id=write_id
         )
 
+    # Withdraw function to handle withdraw requests
     def withdraw_money(self, money_amount):
 
         if self.balance < money_amount:
@@ -105,13 +110,14 @@ class Branch(banks_pb2_grpc.BranchServiceServicer):
             balance=self.balance, write_id=write_id
         )
 
+    # Propagate deposit to other branches
     def propagate_deposit(self, money_amount):
         self.balance += money_amount
         print(f"[Branch {self.id}] Propagated deposit +{money_amount}")
         return banks_pb2.BranchResponse(
             id=self.id, interface_type="propagate_deposit", result="success", balance=self.balance
         )
-
+    # Propagate withdraw to other branches
     def propagate_withdraw(self, money_amount):
         self.balance -= money_amount
         print(f"[Branch {self.id}] Propagated withdraw -{money_amount}")
@@ -119,6 +125,7 @@ class Branch(banks_pb2_grpc.BranchServiceServicer):
             id=self.id, interface_type="propagate_withdraw", result="success", balance=self.balance
         )
 
+    # Update function for propgating to other branches that calls specified propagations
     def _propagate_interface_update(self, money_amount, method_name, write_id=None):
         for branch_instance in self.branches:
             # no self propagation

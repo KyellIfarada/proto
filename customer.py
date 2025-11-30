@@ -6,6 +6,8 @@ import banks_pb2_grpc
 import time
 
 class Customer:
+
+    #Initialize variables
     def __init__(self, id, events, branches):
         self.id = id
         self.events = events
@@ -14,7 +16,7 @@ class Customer:
         self.stubList = []
         self.set_of_writes = set()
 
-        
+        # Branch instances set with ports.
         for branch_instance in self.branches:
             branch_id = branch_instance["id"]
             port = 50050 + branch_id
@@ -92,6 +94,7 @@ class Customer:
             print(f"[[Customer] {self.id}] gRPC error during {interface_type}: {g}")
             return {"interface": interface_type, "result": "error"}
 
+    # Execute event in customer list
     def executeEvents(self):
         if not self.stubList:
             raise RuntimeError("StubList not found.")
@@ -102,6 +105,7 @@ class Customer:
 
         print(f"[Customer {self.id}] All Events Completed.\n")
 
+    # Return output format
     def getOutputFormat(self):
         """Return output."""
         return {"id": self.id, "recv": self.recvMsg}

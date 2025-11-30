@@ -44,7 +44,7 @@ def main():
     print("[Client] Intiating performance of customer events...")
 
    # Process events and add results to each customer's recvMsg
-    output = []  # This will store the final output in the desired format
+    output = [] 
 
     for customer_instance in customersObjList:
         for event_instance in customer_instance.events:
